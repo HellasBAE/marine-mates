@@ -3,6 +3,31 @@ import type { Vessel, MapBounds } from '../types'
 import { fetchVessels, fetchCachedVessels, connectAISStream, trackMyBoat } from '../api'
 
 const REFRESH_INTERVAL = 15_000
+const POLL_INTERVAL = 10_000
+
+// Poll the serverless AIS endpoint (for production where browser WS is blocked)
+async function pollAIS(
+  apiKey: string,
+  bounds: MapBounds,
+  mmsi?: string,
+): Promise<Vessel[]> {
+  try {
+    const params = new URLSearchParams({
+      south: String(bounds.south),
+      north: String(bounds.north),
+      west: String(bounds.west),
+      east: String(bounds.east),
+      duration: '5',
+    })
+    if (apiKey) params.set('apiKey', apiKey)
+    if (mmsi) params.set('mmsi', mmsi)
+    const res = await fetch(`/api/ais?${params}`)
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
 
 export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: string) {
   const [vessels, setVessels] = useState<Map<number, Vessel>>(new Map())
@@ -15,7 +40,6 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
   const boundsRef = useRef<MapBounds>(bounds)
   const liveMMSIs = useRef(new Set<number>())
 
-  // Keep bounds ref current without triggering reconnects
   useEffect(() => {
     boundsRef.current = bounds
   }, [bounds])
@@ -38,7 +62,6 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
   }, [])
 
   useEffect(() => {
-    // Clean up previous connection
     disconnectRef.current?.()
     disconnectRef.current = null
     liveMMSIs.current.clear()
@@ -46,14 +69,12 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
     setCachedCount(0)
 
     if (!apiKey) {
-      // Demo mode with polling
       setIsLive(false)
       loadVessels()
       const interval = setInterval(loadVessels, REFRESH_INTERVAL)
       return () => clearInterval(interval)
     }
 
-    // Live mode with WebSocket
     setIsLive(true)
     setLoading(true)
     setError(null)
@@ -68,95 +89,141 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
       west: Math.max(-180, b.west - lngPad),
     }
 
-    // 1. Load cached vessels immediately for instant display
-    fetchCachedVessels(wideBounds).then((cached) => {
-      if (cached.length > 0) {
-        setVessels((prev) => {
-          const next = new Map(prev)
-          cached.forEach((v) => {
-            // Don't overwrite already-live vessels
-            if (!next.has(v.mmsi) || next.get(v.mmsi)?.isCached) {
-              next.set(v.mmsi, v)
-            }
+    // In dev with backend, load cached vessels first
+    if (import.meta.env.DEV) {
+      fetchCachedVessels(wideBounds).then((cached) => {
+        if (cached.length > 0) {
+          setVessels((prev) => {
+            const next = new Map(prev)
+            cached.forEach((v) => {
+              if (!next.has(v.mmsi) || next.get(v.mmsi)?.isCached) {
+                next.set(v.mmsi, v)
+              }
+            })
+            return next
           })
-          return next
-        })
-        setCachedCount(cached.length)
-        setLoading(false)
-      }
-    })
+          setCachedCount(cached.length)
+          setLoading(false)
+        }
+      })
+    }
 
-    // 2. Connect live stream — delay slightly to avoid Firefox killing
-    //    WebSocket connections during page load
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let disposed = false
 
-    const connect = () => {
-      if (disposed) return
+    if (import.meta.env.DEV) {
+      // Dev mode: use WebSocket through Vite proxy
+      let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-      disconnectRef.current = connectAISStream(
-        apiKey,
-        wideBounds,
-        (vessel) => {
-          // Mark as live (not cached)
+      const connect = () => {
+        if (disposed) return
+        disconnectRef.current = connectAISStream(
+          apiKey,
+          wideBounds,
+          (vessel) => {
+            vessel.isCached = false
+            setVessels((prev) => {
+              const next = new Map(prev)
+              next.set(vessel.mmsi, vessel)
+              return next
+            })
+            if (!liveMMSIs.current.has(vessel.mmsi)) {
+              liveMMSIs.current.add(vessel.mmsi)
+              setLiveCount(liveMMSIs.current.size)
+            }
+            setLoading(false)
+            setError(null)
+          },
+          (errMsg) => {
+            if (!disposed) {
+              setError(`${errMsg} — reconnecting...`)
+              reconnectTimer = setTimeout(connect, 5000)
+            }
+          }
+        )
+      }
+
+      const startDelay = setTimeout(connect, 1500)
+
+      return () => {
+        clearTimeout(startDelay)
+        disposed = true
+        disconnectRef.current?.()
+        disconnectRef.current = null
+        if (reconnectTimer) clearTimeout(reconnectTimer)
+      }
+    } else {
+      // Production: poll the serverless /api/ais endpoint
+      let pollTimer: ReturnType<typeof setInterval> | null = null
+
+      const doPoll = async () => {
+        if (disposed) return
+        try {
+          const data = await pollAIS(apiKey, wideBounds)
+          if (disposed) return
+          setVessels((prev) => {
+            const next = new Map(prev)
+            data.forEach((v) => {
+              next.set(v.mmsi, v)
+              if (!liveMMSIs.current.has(v.mmsi)) {
+                liveMMSIs.current.add(v.mmsi)
+              }
+            })
+            return next
+          })
+          setLiveCount(liveMMSIs.current.size)
+          setLoading(false)
+          setError(null)
+        } catch {
+          if (!disposed) setError('Failed to poll AIS data')
+        }
+      }
+
+      // First poll immediately
+      doPoll()
+      pollTimer = setInterval(doPoll, POLL_INTERVAL)
+
+      return () => {
+        disposed = true
+        if (pollTimer) clearInterval(pollTimer)
+      }
+    }
+  }, [apiKey, loadVessels])
+
+  // Track user's boat
+  useEffect(() => {
+    if (!apiKey || !myBoatMmsi) return
+
+    if (import.meta.env.DEV) {
+      // Dev: WebSocket
+      const timer = setTimeout(() => {
+        const disconnect = trackMyBoat(apiKey, myBoatMmsi, (vessel) => {
           vessel.isCached = false
-
           setVessels((prev) => {
             const next = new Map(prev)
             next.set(vessel.mmsi, vessel)
             return next
           })
-
-          // Track live count
-          if (!liveMMSIs.current.has(vessel.mmsi)) {
-            liveMMSIs.current.add(vessel.mmsi)
-            setLiveCount(liveMMSIs.current.size)
-          }
-
-          setLoading(false)
-          setError(null)
-        },
-        (errMsg) => {
-          if (!disposed) {
-            setError(`${errMsg} — reconnecting...`)
-            reconnectTimer = setTimeout(connect, 5000)
-          }
-        }
-      )
-    }
-
-    // Wait for page to finish loading before opening WebSocket
-    const startDelay = setTimeout(connect, 1500)
-
-    return () => {
-      clearTimeout(startDelay)
-      disposed = true
-      disconnectRef.current?.()
-      disconnectRef.current = null
-      if (reconnectTimer) clearTimeout(reconnectTimer)
-    }
-  }, [apiKey, loadVessels])
-
-  // Dedicated connection to track the user's boat globally
-  useEffect(() => {
-    if (!apiKey || !myBoatMmsi) return
-
-    const timer = setTimeout(() => {
-      const disconnect = trackMyBoat(apiKey, myBoatMmsi, (vessel) => {
-        vessel.isCached = false
+        })
+        cleanupRef.current = disconnect
+      }, 2000)
+      const cleanupRef = { current: () => {} }
+      return () => { clearTimeout(timer); cleanupRef.current() }
+    } else {
+      // Production: poll with MMSI filter
+      let disposed = false
+      const poll = async () => {
+        if (disposed) return
+        const data = await pollAIS(apiKey, { south: -90, north: 90, west: -180, east: 180 }, myBoatMmsi)
+        if (disposed) return
         setVessels((prev) => {
           const next = new Map(prev)
-          next.set(vessel.mmsi, vessel)
+          data.forEach((v) => next.set(v.mmsi, v))
           return next
         })
-      })
-      cleanupRef.current = disconnect
-    }, 2000)
-
-    const cleanupRef = { current: () => {} }
-    return () => {
-      clearTimeout(timer)
-      cleanupRef.current()
+      }
+      poll()
+      const timer = setInterval(poll, POLL_INTERVAL)
+      return () => { disposed = true; clearInterval(timer) }
     }
   }, [apiKey, myBoatMmsi])
 

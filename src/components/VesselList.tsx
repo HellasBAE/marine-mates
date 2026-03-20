@@ -105,23 +105,51 @@ export function VesselList({
 
     // 2. Start worldwide AIS scan
     if (apiKey) {
-      worldCleanupRef.current = searchWorldwide(
-        apiKey,
-        query.trim(),
-        (vessel) => {
-          setWorldResults((prev) => {
-            if (prev.some((v) => v.mmsi === vessel.mmsi)) return prev
-            return [...prev, vessel]
-          })
-        },
-        (status) => {
-          setSearchStatus(status)
-          if (!status.includes('Scanning') && !status.includes('Connecting')) {
+      if (import.meta.env.DEV) {
+        // Dev: use WebSocket-based worldwide search
+        worldCleanupRef.current = searchWorldwide(
+          apiKey,
+          query.trim(),
+          (vessel) => {
+            setWorldResults((prev) => {
+              if (prev.some((v) => v.mmsi === vessel.mmsi)) return prev
+              return [...prev, vessel]
+            })
+          },
+          (status) => {
+            setSearchStatus(status)
+            if (!status.includes('Scanning') && !status.includes('Connecting')) {
+              setSearching(false)
+            }
+          },
+          30000,
+        )
+      } else {
+        // Production: poll serverless function with worldwide bounds
+        setSearchStatus('Scanning worldwide AIS...')
+        const params = new URLSearchParams({
+          south: '-90', north: '90', west: '-180', east: '180',
+          duration: '8',
+          apiKey,
+        })
+        fetch(`/api/ais?${params}`)
+          .then((r) => r.json())
+          .then((data: Vessel[]) => {
+            const q = query.trim().toLowerCase()
+            const matches = data.filter((v: Vessel) =>
+              v.name.toLowerCase().includes(q) ||
+              v.callsign.toLowerCase().includes(q) ||
+              String(v.mmsi).includes(q)
+            )
+            setWorldResults(matches)
+            setSearchStatus(matches.length > 0 ? `${matches.length} result${matches.length > 1 ? 's' : ''}` : 'No matches found')
             setSearching(false)
-          }
-        },
-        30000, // 30s timeout
-      )
+          })
+          .catch(() => {
+            setSearchStatus('Search failed')
+            setSearching(false)
+          })
+      }
     } else {
       setSearching(false)
     }
