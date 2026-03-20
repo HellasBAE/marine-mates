@@ -39,7 +39,7 @@ interface Vessel {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const apiKey = (req.query.apiKey as string) || process.env.VITE_AISSTREAM_API_KEY || ''
+  const apiKey = (req.query.apiKey as string) || process.env.AISSTREAM_API_KEY || process.env.VITE_AISSTREAM_API_KEY || ''
   const south = parseFloat(req.query.south as string) || -90
   const north = parseFloat(req.query.north as string) || 90
   const west = parseFloat(req.query.west as string) || -180
