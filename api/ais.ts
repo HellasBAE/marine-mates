@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { WebSocket } from 'ws'
-import { getDb } from './db'
+import { createClient } from '@libsql/client'
+
+function getDb() {
+  const url = (process.env.TURSO_DATABASE_URL || '').trim()
+  const authToken = (process.env.TURSO_AUTH_TOKEN || '').trim()
+  return createClient({ url, authToken })
+}
 
 const SHIP_TYPES: Record<number, string> = {
   0: 'Unknown', 20: 'Wing in Ground', 30: 'Fishing', 31: 'Towing',

@@ -34,3 +34,4 @@ dev.db-journal
 .claude/
 
 .vercel
+.env.vercel

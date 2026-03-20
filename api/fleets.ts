@@ -39,7 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: 'Method not allowed' })
   } catch (err) {
     console.error('Fleets error:', err)
-    const url = (process.env.TURSO_DATABASE_URL || '').trim()
-    res.status(500).json({ error: String(err), urlPrefix: url.slice(0, 30) })
+    res.status(500).json({ error: String(err) })
   }
 }

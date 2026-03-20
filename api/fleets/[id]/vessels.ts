@@ -1,5 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getDb } from '../../db'
+import { createClient } from '@libsql/client'
+
+function getDb() {
+  const url = (process.env.TURSO_DATABASE_URL || '').trim()
+  const authToken = (process.env.TURSO_AUTH_TOKEN || '').trim()
+  return createClient({ url, authToken })
+}
 
 function genId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
