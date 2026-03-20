@@ -32,3 +32,5 @@ prisma/dev.db-wal
 dev.db
 dev.db-journal
 .claude/
+
+.vercel
