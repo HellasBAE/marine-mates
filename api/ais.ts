@@ -53,12 +53,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const vessels = new Map<number, Vessel>()
+  let wsError = ''
+  let wsOpened = false
 
   await new Promise<void>((resolve) => {
     const ws = new WebSocket('wss://stream.aisstream.io/v0/stream')
     const timer = setTimeout(() => { ws.close(); resolve() }, duration * 1000)
 
     ws.on('open', () => {
+      wsOpened = true
       const sub: Record<string, unknown> = {
         APIKey: apiKey,
         BoundingBoxes: [[[south, west], [north, east]]],
@@ -97,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch { /* skip */ }
     })
 
-    ws.on('error', () => { clearTimeout(timer); resolve() })
+    ws.on('error', (err) => { wsError = String(err); clearTimeout(timer); resolve() })
     ws.on('close', () => { clearTimeout(timer); resolve() })
   })
 
@@ -124,5 +127,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
-  res.json(vesselArr)
+  res.json({ vessels: vesselArr, debug: { wsOpened, wsError, vesselCount: vesselArr.length, apiKeyLen: apiKey.length } })
 }
