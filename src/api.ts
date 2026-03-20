@@ -576,8 +576,9 @@ export async function fetchVessels(bounds: MapBounds): Promise<Vessel[]> {
 // In dev, Vite proxies /api to the backend.
 const API_BASE = ''
 
-// Fetch cached vessels from the backend for a bounding box
+// Fetch cached vessels from the backend for a bounding box (dev only — backend required)
 export async function fetchCachedVessels(bounds: MapBounds): Promise<Vessel[]> {
+  if (!import.meta.env.DEV) return []
   try {
     const b = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`
     const res = await fetch(`${API_BASE}/api/vessels?bounds=${b}`)
@@ -607,8 +608,9 @@ export async function fetchCachedVessels(bounds: MapBounds): Promise<Vessel[]> {
   }
 }
 
-// Search vessels by name in the backend cache
+// Search vessels by name in the backend cache (dev only — backend required)
 export async function searchCachedVessels(query: string): Promise<Vessel[]> {
+  if (!import.meta.env.DEV) return []
   try {
     const res = await fetch(`${API_BASE}/api/vessels/search?q=${encodeURIComponent(query)}`)
     if (!res.ok) return []
