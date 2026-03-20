@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'boat-icon.png'],
       manifest: {
-        name: 'Boat Tracker',
-        short_name: 'BoatTracker',
-        description: 'Track boats in real-time on a live map',
+        name: 'Marine Mates',
+        short_name: 'MarineMates',
+        description: 'Marine Mates — Track boats in real-time on a live map',
         theme_color: '#0a1929',
         background_color: '#0a1929',
         display: 'standalone',

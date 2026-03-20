@@ -323,7 +323,7 @@ export function connectAISStream(
       ],
       FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport'],
     }
-    console.log('[BoatTracker] WS connected, subscribing:', JSON.stringify(subscribeMsg))
+    console.log('[MarineMates] WS connected, subscribing:', JSON.stringify(subscribeMsg))
     ws.send(JSON.stringify(subscribeMsg))
   }
 
@@ -335,14 +335,14 @@ export function connectAISStream(
       // Handle error responses from the API
       if (data.ERROR || data.error) {
         const msg = data.ERROR || data.error
-        console.error('[BoatTracker] API error:', msg)
+        console.error('[MarineMates] API error:', msg)
         onError(`AIS API error: ${msg}`)
         return
       }
 
       const meta = data.MetaData
       if (!meta) {
-        console.log('[BoatTracker] Message without MetaData:', raw.slice(0, 200))
+        console.log('[MarineMates] Message without MetaData:', raw.slice(0, 200))
         return
       }
 
@@ -378,14 +378,14 @@ export function connectAISStream(
   }
 
   ws.onerror = (evt) => {
-    console.error('[BoatTracker] WS error:', evt)
+    console.error('[MarineMates] WS error:', evt)
     if (!intentionallyClosed) {
       onError('WebSocket connection error')
     }
   }
 
   ws.onclose = (event) => {
-    console.warn('[BoatTracker] WS closed:', { code: event.code, reason: event.reason, didOpen })
+    console.warn('[MarineMates] WS closed:', { code: event.code, reason: event.reason, didOpen })
     if (!intentionallyClosed) {
       if (!didOpen) {
         onError('Could not connect to AIS stream — check your network/API key')

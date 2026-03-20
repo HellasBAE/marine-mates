@@ -8,7 +8,7 @@ interface Settings {
   myBoatMmsi: string
 }
 
-const STORAGE_KEY = 'boattracker_settings'
+const STORAGE_KEY = 'marinemates_settings'
 
 const defaultSettings: Settings = {
   apiKey: import.meta.env.VITE_AISSTREAM_API_KEY ?? '',

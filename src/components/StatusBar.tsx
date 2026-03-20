@@ -63,7 +63,7 @@ export function StatusBar({
         <button className="hamburger-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar">
           {sidebarOpen ? '✕' : '☰'}
         </button>
-        <span className="app-title">Boat Tracker</span>
+        <span className="app-title">Marine Mates</span>
       </div>
 
       <div className="status-center">
