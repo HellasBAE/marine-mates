@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Ready for auth — unused for now
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  fleets    Fleet[]
+  createdAt DateTime @default(now())
+}
+
+model Fleet {
+  id        String          @id @default(cuid())
+  name      String
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vessels   TrackedVessel[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model TrackedVessel {
+  id       String  @id @default(cuid())
+  mmsi     Int
+  nickname String?
+  fleetId  String
+  fleet    Fleet   @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+  addedAt  DateTime @default(now())
+
+  @@unique([fleetId, mmsi])
+}
