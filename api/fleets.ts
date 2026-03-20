@@ -6,10 +6,9 @@ function genId() {
 }
 
 function getDb() {
-  return createClient({
-    url: process.env.TURSO_DATABASE_URL || '',
-    authToken: process.env.TURSO_AUTH_TOKEN || '',
-  })
+  const url = (process.env.TURSO_DATABASE_URL || '').trim()
+  const authToken = (process.env.TURSO_AUTH_TOKEN || '').trim()
+  return createClient({ url, authToken })
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -40,6 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: 'Method not allowed' })
   } catch (err) {
     console.error('Fleets error:', err)
-    res.status(500).json({ error: String(err), env: { hasUrl: !!process.env.TURSO_DATABASE_URL, hasToken: !!process.env.TURSO_AUTH_TOKEN } })
+    const url = (process.env.TURSO_DATABASE_URL || '').trim()
+    res.status(500).json({ error: String(err), urlPrefix: url.slice(0, 30) })
   }
 }
