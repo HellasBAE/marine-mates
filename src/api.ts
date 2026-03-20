@@ -456,20 +456,13 @@ export function trackMyBoat(
 
   ws.onerror = () => {}
   ws.onclose = () => {
-    // Auto-reconnect after 10s if not intentionally closed
     if (!intentionallyClosed) {
       setTimeout(() => {
         if (!intentionallyClosed) {
-          const cleanup = trackMyBoat(apiKey, mmsi, onVessel)
-          disconnectFn = cleanup
+          trackMyBoat(apiKey, mmsi, onVessel)
         }
       }, 10000)
     }
-  }
-
-  let disconnectFn = () => {
-    intentionallyClosed = true
-    ws.close()
   }
 
   return () => {
