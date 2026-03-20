@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { WebSocket } from 'ws'
+import { getDb } from './db.js'
 
 const SHIP_TYPES: Record<number, string> = {
   0: 'Unknown', 20: 'Wing in Ground', 30: 'Fishing', 31: 'Towing',
@@ -94,6 +95,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ws.on('close', () => { clearTimeout(timer); resolve() })
   })
 
+  // Cache vessel positions in Turso
+  const vesselArr = Array.from(vessels.values())
+  if (vesselArr.length > 0 && process.env.TURSO_DATABASE_URL) {
+    try {
+      const db = getDb()
+      for (const v of vesselArr) {
+        await db.execute({
+          sql: `INSERT INTO vessel_cache (mmsi, name, lat, lng, speed, course, heading, shipType, destination, status, lastUpdate, flag, length, width, callsign, imo, cachedAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(mmsi) DO UPDATE SET
+                  name=excluded.name, lat=excluded.lat, lng=excluded.lng,
+                  speed=excluded.speed, course=excluded.course, heading=excluded.heading,
+                  shipType=excluded.shipType, destination=excluded.destination, status=excluded.status,
+                  lastUpdate=excluded.lastUpdate, flag=excluded.flag, length=excluded.length,
+                  width=excluded.width, callsign=excluded.callsign, imo=excluded.imo,
+                  cachedAt=datetime('now')`,
+          args: [v.mmsi, v.name, v.lat, v.lng, v.speed, v.course, v.heading, v.shipType, v.destination, v.status, v.lastUpdate, v.flag, v.length, v.width, v.callsign, v.imo],
+        })
+      }
+    } catch { /* cache write failure is non-critical */ }
+  }
+
   res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
-  res.json(Array.from(vessels.values()))
+  res.json(vesselArr)
 }

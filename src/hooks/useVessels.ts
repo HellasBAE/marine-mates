@@ -89,9 +89,8 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
       west: Math.max(-180, b.west - lngPad),
     }
 
-    // In dev with backend, load cached vessels first
-    if (import.meta.env.DEV) {
-      fetchCachedVessels(wideBounds).then((cached) => {
+    // Load cached vessels for instant display
+    fetchCachedVessels(wideBounds).then((cached) => {
         if (cached.length > 0) {
           setVessels((prev) => {
             const next = new Map(prev)
@@ -106,7 +105,6 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
           setLoading(false)
         }
       })
-    }
 
     let disposed = false
 

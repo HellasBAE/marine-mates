@@ -52,9 +52,8 @@ export function useFleets() {
   const [fleets, setFleets] = useState<Fleet[]>(loadLocal)
   const [useApi, setUseApi] = useState(false)
 
-  // On mount, check if backend is available (skip in production)
+  // On mount, check if backend is available
   useEffect(() => {
-    if (!import.meta.env.DEV) return
     checkBackend().then((available) => {
       if (available) {
         setUseApi(true)
