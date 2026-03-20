@@ -662,6 +662,11 @@ body {
   color: var(--text-muted);
 }
 
+.search-status {
+  color: var(--success);
+  animation: pulse 2s infinite;
+}
+
 .search-prompt {
   padding: 32px 24px;
   text-align: center;

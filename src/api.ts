@@ -471,6 +471,103 @@ export function trackMyBoat(
   }
 }
 
+// Worldwide vessel search — opens a temporary global AIS subscription,
+// filters by name/callsign client-side, returns matches via callback.
+// Auto-closes after timeout or when cleanup is called.
+export function searchWorldwide(
+  apiKey: string,
+  query: string,
+  onResult: (vessel: Vessel) => void,
+  onStatus: (status: string) => void,
+  timeoutMs = 30000,
+): () => void {
+  if (!apiKey || !query.trim()) return () => {}
+
+  let intentionallyClosed = false
+  const q = query.toLowerCase().trim()
+  const seen = new Set<number>()
+  const ws = new WebSocket(AISSTREAM_WS)
+
+  onStatus('Connecting...')
+
+  ws.onopen = () => {
+    onStatus('Scanning worldwide AIS...')
+    ws.send(JSON.stringify({
+      APIKey: apiKey,
+      BoundingBoxes: [[[-90, -180], [90, 180]]],
+      FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport'],
+    }))
+  }
+
+  ws.onmessage = (event) => {
+    try {
+      const raw = typeof event.data === 'string' ? event.data : ''
+      const data = JSON.parse(raw)
+      const meta = data.MetaData
+      if (!meta) return
+      const pos = data.Message?.PositionReport ?? data.Message?.StandardClassBPositionReport
+      if (!pos) return
+
+      const name = (meta.ShipName || '').trim()
+      const callsign = (meta.CallSign || '').trim()
+      const mmsiStr = String(meta.MMSI)
+
+      // Match against query
+      if (
+        name.toLowerCase().includes(q) ||
+        callsign.toLowerCase().includes(q) ||
+        mmsiStr.includes(q)
+      ) {
+        if (!seen.has(meta.MMSI)) {
+          seen.add(meta.MMSI)
+          onResult({
+            mmsi: meta.MMSI,
+            name: name || `MMSI ${meta.MMSI}`,
+            lat: pos.Latitude,
+            lng: pos.Longitude,
+            speed: pos.Sog ?? 0,
+            course: pos.Cog ?? 0,
+            heading: pos.TrueHeading ?? pos.Cog ?? 0,
+            shipType: resolveShipType(meta.ShipType ?? 0),
+            destination: (meta.Destination || '').trim(),
+            status: resolveNavStatus(pos.NavigationalStatus ?? 15),
+            lastUpdate: meta.time_utc || new Date().toISOString(),
+            flag: meta.country ?? '',
+            length: meta.length ?? 0,
+            width: meta.width ?? 0,
+            callsign,
+            imo: meta.IMO ?? 0,
+          })
+          onStatus(`Found ${seen.size} match${seen.size > 1 ? 'es' : ''} — still scanning...`)
+        }
+      }
+    } catch { /* skip */ }
+  }
+
+  ws.onerror = () => {
+    if (!intentionallyClosed) onStatus('Search connection error')
+  }
+
+  ws.onclose = () => {
+    if (!intentionallyClosed) {
+      onStatus(seen.size > 0 ? `${seen.size} result${seen.size > 1 ? 's' : ''} found` : 'Search complete — no matches')
+    }
+  }
+
+  // Auto-close after timeout
+  const timer = setTimeout(() => {
+    intentionallyClosed = true
+    ws.close()
+    onStatus(seen.size > 0 ? `${seen.size} result${seen.size > 1 ? 's' : ''}` : 'No matches found')
+  }, timeoutMs)
+
+  return () => {
+    intentionallyClosed = true
+    clearTimeout(timer)
+    ws.close()
+  }
+}
+
 // Fetch demo vessels (or real API if configured)
 export async function fetchVessels(bounds: MapBounds): Promise<Vessel[]> {
   return generateDemoVessels(bounds)

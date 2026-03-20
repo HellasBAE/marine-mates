@@ -98,6 +98,7 @@ export default function App() {
             selectedVessel={selectedVessel}
             onSelectVessel={handleSelectVessel}
             myBoatMmsi={settings.myBoatMmsi}
+            apiKey={settings.apiKey}
             fleets={fleets}
             onAddToFleet={addToFleet}
             onRemoveFromFleet={removeFromFleet}

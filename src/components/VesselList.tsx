@@ -1,12 +1,13 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import type { Vessel, Fleet } from '../types'
-import { getShipTypeColor, searchCachedVessels } from '../api'
+import { getShipTypeColor, searchCachedVessels, searchWorldwide } from '../api'
 
 interface VesselListProps {
   vessels: Vessel[]
   selectedVessel: Vessel | null
   onSelectVessel: (vessel: Vessel) => void
   myBoatMmsi: string
+  apiKey: string
   fleets: Fleet[]
   onAddToFleet: (fleetId: string, mmsi: number) => void
   onRemoveFromFleet: (fleetId: string, mmsi: number) => void
@@ -42,6 +43,7 @@ export function VesselList({
   selectedVessel,
   onSelectVessel,
   myBoatMmsi,
+  apiKey,
   fleets,
   onAddToFleet,
   onRemoveFromFleet,
@@ -70,25 +72,77 @@ export function VesselList({
     return map
   }, [vessels])
 
-  // Backend search results (from DB cache)
+  // Backend cache results
   const [dbResults, setDbResults] = useState<Vessel[]>([])
+  // Worldwide AIS search results
+  const [worldResults, setWorldResults] = useState<Vessel[]>([])
+  const [searchStatus, setSearchStatus] = useState('')
   const [searching, setSearching] = useState(false)
+  const worldCleanupRef = useRef<(() => void) | null>(null)
 
-  useEffect(() => {
-    if (tab !== 'search' || !search.trim() || search.trim().length < 2) {
-      setDbResults([])
+  // Cleanup worldwide search on unmount
+  useEffect(() => () => { worldCleanupRef.current?.() }, [])
+
+  const startSearch = useCallback((query: string) => {
+    // Stop any previous worldwide search
+    worldCleanupRef.current?.()
+    worldCleanupRef.current = null
+    setWorldResults([])
+    setDbResults([])
+    setSearchStatus('')
+
+    if (!query.trim() || query.trim().length < 2) {
+      setSearching(false)
       return
     }
-    const timer = setTimeout(async () => {
-      setSearching(true)
-      const results = await searchCachedVessels(search.trim())
-      setDbResults(results)
-      setSearching(false)
-    }, 300) // debounce
-    return () => clearTimeout(timer)
-  }, [search, tab])
 
-  // Merge live + cached search results, live takes priority
+    setSearching(true)
+
+    // 1. Search backend cache
+    searchCachedVessels(query.trim()).then((results) => {
+      setDbResults(results)
+    })
+
+    // 2. Start worldwide AIS scan
+    if (apiKey) {
+      worldCleanupRef.current = searchWorldwide(
+        apiKey,
+        query.trim(),
+        (vessel) => {
+          setWorldResults((prev) => {
+            if (prev.some((v) => v.mmsi === vessel.mmsi)) return prev
+            return [...prev, vessel]
+          })
+        },
+        (status) => {
+          setSearchStatus(status)
+          if (!status.includes('Scanning') && !status.includes('Connecting')) {
+            setSearching(false)
+          }
+        },
+        30000, // 30s timeout
+      )
+    } else {
+      setSearching(false)
+    }
+  }, [apiKey])
+
+  // Debounce search input
+  useEffect(() => {
+    if (tab !== 'search') return
+    const timer = setTimeout(() => startSearch(search), 500)
+    return () => clearTimeout(timer)
+  }, [search, tab, startSearch])
+
+  // Stop worldwide search when leaving search tab
+  useEffect(() => {
+    if (tab !== 'search') {
+      worldCleanupRef.current?.()
+      worldCleanupRef.current = null
+    }
+  }, [tab])
+
+  // Merge live + cached + worldwide search results
   const searchResults = useMemo(() => {
     if (!search.trim()) return []
     const query = search.toLowerCase().trim()
@@ -106,7 +160,14 @@ export function VesselList({
       }
     }
 
-    // Add DB cache results (don't overwrite live vessels)
+    // Add worldwide AIS results (these are live, not cached)
+    for (const v of worldResults) {
+      if (!merged.has(v.mmsi)) {
+        merged.set(v.mmsi, v)
+      }
+    }
+
+    // Add DB cache results (lowest priority)
     for (const v of dbResults) {
       if (!merged.has(v.mmsi)) {
         merged.set(v.mmsi, { ...v, isCached: true })
@@ -124,7 +185,7 @@ export function VesselList({
         if (a.distance != null && b.distance != null) return a.distance - b.distance
         return a.vessel.name.localeCompare(b.vessel.name)
       })
-  }, [vessels, search, dbResults, myBoat, myMmsi])
+  }, [vessels, search, worldResults, dbResults, myBoat, myMmsi])
 
   const handleCreateFleet = () => {
     if (newFleetName.trim()) {
@@ -431,7 +492,9 @@ export function VesselList({
             />
             {search.trim() && (
               <div className="search-result-count">
-                {searching ? 'Searching...' : (
+                {searchStatus && <span className="search-status">{searchStatus}</span>}
+                {!searchStatus && searching && 'Searching...'}
+                {!searching && !searchStatus && searchResults.length > 0 && (
                   <>
                     {searchResults.length} vessel{searchResults.length !== 1 ? 's' : ''} found
                     {searchResults.length > 1 && myBoat && ' — sorted by distance'}
@@ -443,7 +506,7 @@ export function VesselList({
           <div className="vessel-list-items">
             {!search.trim() && (
               <div className="search-prompt">
-                Type a boat name to find it on the map
+                Search for any vessel worldwide by name, callsign, or MMSI
               </div>
             )}
             {search.trim() && searchResults.length === 0 && (
