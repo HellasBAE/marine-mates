@@ -1,13 +1,15 @@
-import { createClient } from '@libsql/client'
+import { createClient, type Client } from '@libsql/client'
 
-let client: ReturnType<typeof createClient> | null = null
+let client: Client | null = null
 
-export function getDb() {
+export function getDb(): Client {
   if (!client) {
-    client = createClient({
-      url: process.env.TURSO_DATABASE_URL || '',
-      authToken: process.env.TURSO_AUTH_TOKEN || '',
-    })
+    const url = process.env.TURSO_DATABASE_URL
+    const authToken = process.env.TURSO_AUTH_TOKEN
+    if (!url || !authToken) {
+      throw new Error('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set')
+    }
+    client = createClient({ url, authToken })
   }
   return client
 }

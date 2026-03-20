@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { WebSocket } from 'ws'
-import { getDb } from './db.js'
+import { getDb } from './db'
 
 const SHIP_TYPES: Record<number, string> = {
   0: 'Unknown', 20: 'Wing in Ground', 30: 'Fishing', 31: 'Towing',

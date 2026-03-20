@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getDb } from './db.js'
+import { getDb } from './db'
 
 function genId() {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
