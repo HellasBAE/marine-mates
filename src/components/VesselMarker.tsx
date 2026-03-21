@@ -15,17 +15,19 @@ interface VesselMarkerProps {
 
 function createBoatIcon(heading: number, color: string, isSelected: boolean, isMyBoat: boolean, isCached: boolean, isTracked: boolean): L.DivIcon {
   const effectiveColor = isMyBoat ? '#FFD700' : color
+  // Tracked/myBoat vessels always render full size, even if data came from cache
+  const effectivelyCached = isCached && !isTracked && !isMyBoat
   let size: number
-  if (isCached) {
+  if (effectivelyCached) {
     size = isSelected ? 32 : 24
   } else if (isMyBoat || isTracked) {
     size = isSelected ? 44 : 36
   } else {
     size = isSelected ? 36 : 28
   }
-  const opacity = isCached ? 0.35 : 1
-  const borderColor = isSelected ? '#fff' : isMyBoat ? 'rgba(255,215,0,0.8)' : isCached ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.4)'
-  const borderWidth = isSelected || isMyBoat ? 2 : 1
+  const opacity = effectivelyCached ? 0.35 : 1
+  const borderColor = isSelected ? '#fff' : isMyBoat ? 'rgba(255,215,0,0.8)' : effectivelyCached ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.4)'
+  const borderWidth = isSelected || isMyBoat || isTracked ? 2 : 1
   const shadow = isSelected ? '0 0 12px rgba(255,255,255,0.5)' : isMyBoat ? '0 0 12px rgba(255,215,0,0.6)' : '0 2px 4px rgba(0,0,0,0.5)'
   const pulseClass = isMyBoat ? 'my-boat-pulse' : ''
 
@@ -35,7 +37,7 @@ function createBoatIcon(heading: number, color: string, isSelected: boolean, isM
            style="transform: rotate(${heading}deg); filter: drop-shadow(${shadow});">
         <path d="M12 2 L18 18 L12 14 L6 18 Z"
               fill="${effectiveColor}" stroke="${borderColor}" stroke-width="${borderWidth}"
-              stroke-linejoin="round"${isCached ? ' stroke-dasharray="2,2"' : ''}/>
+              stroke-linejoin="round"${effectivelyCached ? ' stroke-dasharray="2,2"' : ''}/>
       </svg>
     </div>
   `
