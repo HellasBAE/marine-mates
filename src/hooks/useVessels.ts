@@ -7,7 +7,7 @@ const POLL_INTERVAL = 10_000
 
 // Poll the serverless AIS endpoint (for production where browser WS is blocked)
 async function pollAIS(
-  apiKey: string,
+  _apiKey: string,
   bounds: MapBounds,
   mmsi?: string,
 ): Promise<Vessel[]> {
