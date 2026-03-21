@@ -19,7 +19,6 @@ async function pollAIS(
       east: String(bounds.east),
       duration: '5',
     })
-    if (apiKey) params.set('apiKey', apiKey)
     if (mmsi) params.set('mmsi', mmsi)
     const res = await fetch(`/api/ais?${params}`)
     if (!res.ok) return []

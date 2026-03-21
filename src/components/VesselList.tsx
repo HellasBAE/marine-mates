@@ -129,8 +129,7 @@ export function VesselList({
         setSearchStatus('Scanning worldwide AIS...')
         const params = new URLSearchParams({
           south: '-90', north: '90', west: '-180', east: '180',
-          duration: '8',
-          apiKey,
+          duration: '5',
         })
         fetch(`/api/ais?${params}`)
           .then((r) => r.json())
