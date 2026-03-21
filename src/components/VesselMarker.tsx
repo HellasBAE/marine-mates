@@ -6,17 +6,26 @@ interface VesselMarkerProps {
   vessel: Vessel
   isSelected: boolean
   isMyBoat: boolean
+  isTracked?: boolean
   onClick: () => void
   showName: boolean
   color: string
   isCached?: boolean
 }
 
-function createBoatIcon(heading: number, color: string, isSelected: boolean, isMyBoat: boolean, isCached: boolean): L.DivIcon {
+function createBoatIcon(heading: number, color: string, isSelected: boolean, isMyBoat: boolean, isCached: boolean, isTracked: boolean): L.DivIcon {
   const effectiveColor = isMyBoat ? '#FFD700' : color
-  const size = isCached
-    ? (isSelected ? 22 : 16)
-    : isMyBoat ? (isSelected ? 32 : 26) : (isSelected ? 28 : 20)
+  // Tracked boats are bigger, cached are smaller
+  let size: number
+  if (isCached) {
+    size = isSelected ? 22 : 16
+  } else if (isMyBoat) {
+    size = isSelected ? 36 : 30
+  } else if (isTracked) {
+    size = isSelected ? 36 : 28
+  } else {
+    size = isSelected ? 24 : 16
+  }
   const opacity = isCached ? 0.35 : 1
   const borderColor = isSelected ? '#fff' : isMyBoat ? 'rgba(255,215,0,0.8)' : isCached ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.4)'
   const borderWidth = isSelected || isMyBoat ? 2 : 1
@@ -42,17 +51,17 @@ function createBoatIcon(heading: number, color: string, isSelected: boolean, isM
   })
 }
 
-export function VesselMarker({ vessel, isSelected, isMyBoat, onClick, showName, color, isCached }: VesselMarkerProps) {
-  const icon = createBoatIcon(vessel.heading, color, isSelected, isMyBoat, !!isCached)
+export function VesselMarker({ vessel, isSelected, isMyBoat, isTracked, onClick, showName, color, isCached }: VesselMarkerProps) {
+  const icon = createBoatIcon(vessel.heading, color, isSelected, isMyBoat, !!isCached, !!isTracked)
 
   return (
     <Marker
       position={[vessel.lat, vessel.lng]}
       icon={icon}
       eventHandlers={{ click: onClick }}
-      zIndexOffset={isMyBoat ? 1000 : isCached ? -100 : 0}
+      zIndexOffset={isMyBoat ? 1000 : isTracked ? 500 : isCached ? -100 : 0}
     >
-      {(showName || isMyBoat) && !isCached && (
+      {(showName || isMyBoat || isTracked) && !isCached && (
         <Tooltip
           direction="top"
           offset={[0, -14]}

@@ -153,6 +153,7 @@ export function BoatMap({
           vessel={vessel}
           isSelected={selectedVessel?.mmsi === vessel.mmsi}
           isMyBoat={vessel.mmsi === myMmsi}
+          isTracked={vesselFleetColors?.has(vessel.mmsi)}
           onClick={() => onSelectVessel(vessel)}
           showName={showNames}
           color={vesselFleetColors?.get(vessel.mmsi) || getShipTypeColor(vessel.shipType)}
