@@ -65,6 +65,8 @@ export function VesselList({
   const [expandedFleet, setExpandedFleet] = useState<string | null>('default')
   const [creatingFleet, setCreatingFleet] = useState(false)
   const [newFleetName, setNewFleetName] = useState('')
+  const [addingMmsi, setAddingMmsi] = useState(false)
+  const [newMmsi, setNewMmsi] = useState('')
   const [editingFleetId, setEditingFleetId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [hoveredMmsi, setHoveredMmsi] = useState<number | null>(null)
@@ -133,29 +135,53 @@ export function VesselList({
           30000,
         )
       } else {
-        // Production: poll serverless function with worldwide bounds
-        setSearchStatus('Scanning worldwide AIS...')
-        const params = new URLSearchParams({
-          south: '-90', north: '90', west: '-180', east: '180',
-          duration: '5',
-        })
-        fetch(`/api/ais?${params}`)
-          .then((r) => r.json())
-          .then((data: Vessel[]) => {
-            const q = query.trim().toLowerCase()
-            const matches = data.filter((v: Vessel) =>
-              v.name.toLowerCase().includes(q) ||
-              v.callsign.toLowerCase().includes(q) ||
-              String(v.mmsi).includes(q)
-            )
-            setWorldResults(matches)
-            setSearchStatus(matches.length > 0 ? `${matches.length} result${matches.length > 1 ? 's' : ''}` : 'No matches found')
+        // Production: 3 rounds of polling (5s each) for better coverage
+        const q = query.trim().toLowerCase()
+        const allMatches = new Map<number, Vessel>()
+        let cancelled = false
+
+        const doRound = async (round: number) => {
+          if (cancelled) return
+          setSearchStatus(`Scanning worldwide AIS... round ${round}/3`)
+          try {
+            const params = new URLSearchParams({
+              south: '-90', north: '90', west: '-180', east: '180',
+              duration: '5',
+            })
+            const res = await fetch(`/api/ais?${params}`)
+            const data: Vessel[] = await res.json()
+            for (const v of data) {
+              if (
+                v.name.toLowerCase().includes(q) ||
+                v.callsign.toLowerCase().includes(q) ||
+                String(v.mmsi).includes(q)
+              ) {
+                allMatches.set(v.mmsi, v)
+              }
+            }
+            if (!cancelled) {
+              setWorldResults(Array.from(allMatches.values()))
+              if (allMatches.size > 0) {
+                setSearchStatus(`Found ${allMatches.size} match${allMatches.size > 1 ? 'es' : ''}${round < 3 ? ' — still scanning...' : ''}`)
+              }
+            }
+          } catch { /* skip failed round */ }
+        }
+
+        worldCleanupRef.current = () => { cancelled = true }
+
+        ;(async () => {
+          for (let i = 1; i <= 3; i++) {
+            if (cancelled) break
+            await doRound(i)
+          }
+          if (!cancelled) {
+            setSearchStatus(allMatches.size > 0
+              ? `${allMatches.size} result${allMatches.size > 1 ? 's' : ''}`
+              : 'No matches found — try adding by MMSI')
             setSearching(false)
-          })
-          .catch(() => {
-            setSearchStatus('Search failed')
-            setSearching(false)
-          })
+          }
+        })()
       }
     } else {
       setSearching(false)
@@ -503,6 +529,38 @@ export function VesselList({
                       <div className="fleet-offline-note">
                         {offlineCount} vessel{offlineCount > 1 ? 's' : ''} not in range
                       </div>
+                    )}
+                    {/* Add by MMSI */}
+                    {addingMmsi && expandedFleet === fleet.id ? (
+                      <div className="add-mmsi-form">
+                        <input
+                          className="new-fleet-input"
+                          placeholder="Enter MMSI number..."
+                          value={newMmsi}
+                          onChange={(e) => setNewMmsi(e.target.value.replace(/\D/g, ''))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newMmsi) {
+                              onAddToFleet(fleet.id, parseInt(newMmsi, 10))
+                              setNewMmsi('')
+                              setAddingMmsi(false)
+                            }
+                            if (e.key === 'Escape') setAddingMmsi(false)
+                          }}
+                          autoFocus
+                        />
+                        <button className="btn btn-primary btn-sm" onClick={() => {
+                          if (newMmsi) {
+                            onAddToFleet(fleet.id, parseInt(newMmsi, 10))
+                            setNewMmsi('')
+                            setAddingMmsi(false)
+                          }
+                        }}>Add</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setAddingMmsi(false)}>✕</button>
+                      </div>
+                    ) : expandedFleet === fleet.id && (
+                      <button className="add-mmsi-btn" onClick={() => setAddingMmsi(true)}>
+                        + Add vessel by MMSI
+                      </button>
                     )}
                   </div>
                 )}

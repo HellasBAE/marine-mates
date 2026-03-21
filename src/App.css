@@ -412,6 +412,32 @@ body {
   color: var(--warning);
 }
 
+.add-mmsi-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 16px 8px 32px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.add-mmsi-btn:hover {
+  color: var(--accent);
+  background: var(--bg-surface);
+}
+
+.add-mmsi-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 28px;
+}
+
 /* ---- New Fleet ---- */
 .new-fleet-btn {
   display: block;
