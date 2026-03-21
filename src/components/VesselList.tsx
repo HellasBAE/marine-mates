@@ -628,7 +628,13 @@ export function VesselList({
           <div className="vessel-list-items">
             {!search.trim() && (
               <div className="search-prompt">
-                Search for any vessel worldwide by name, callsign, or MMSI
+                Search for any vessel worldwide by name, callsign, or MMSI.
+                <br /><br />
+                Can't find a boat? Look up its MMSI on{' '}
+                <a href="https://www.marinetraffic.com" target="_blank" rel="noopener noreferrer">MarineTraffic</a>
+                {' '}or{' '}
+                <a href="https://www.vesselfinder.com" target="_blank" rel="noopener noreferrer">VesselFinder</a>
+                , then add it by MMSI in your fleet.
               </div>
             )}
             {search.trim() && searchResults.length === 0 && (
