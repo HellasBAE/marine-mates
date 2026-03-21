@@ -38,6 +38,16 @@ export const FLEET_COLORS = [
   '#607d8b', // slate
 ]
 
+export interface VesselHistoryPoint {
+  lat: number
+  lng: number
+  speed: number
+  course: number
+  heading: number
+  status: string
+  timestamp: string
+}
+
 export interface MapBounds {
   north: number
   south: number

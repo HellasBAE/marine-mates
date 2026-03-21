@@ -1,4 +1,4 @@
-import type { Vessel, MapBounds } from './types'
+import type { Vessel, MapBounds, VesselHistoryPoint } from './types'
 
 const SHIP_TYPES: Record<number, string> = {
   0: 'Unknown',
@@ -632,6 +632,17 @@ export async function searchCachedVessels(query: string): Promise<Vessel[]> {
       imo: r.imo as number,
       isCached: true,
     }))
+  } catch {
+    return []
+  }
+}
+
+// Fetch position history for a tracked vessel
+export async function fetchVesselHistory(mmsi: number, hours = 24): Promise<VesselHistoryPoint[]> {
+  try {
+    const res = await fetch(`/api/history?mmsi=${mmsi}&hours=${hours}`)
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }

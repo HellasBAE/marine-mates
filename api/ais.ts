@@ -46,6 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const east = parseFloat(req.query.east as string) || 180
   const duration = Math.min(parseInt(req.query.duration as string) || 5, 10) // max 10s
   const mmsi = req.query.mmsi as string || ''
+  const trackedMmsis = req.query.trackedMmsis as string || ''
+  const trackedSet = new Set(trackedMmsis ? trackedMmsis.split(',').map(Number).filter(Boolean) : [])
 
   if (!apiKey) {
     res.status(400).json({ error: 'No API key' })
@@ -124,6 +126,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       }
     } catch { /* cache write failure is non-critical */ }
+
+    // Record history for tracked vessels (fleet members + myBoat)
+    if (trackedSet.size > 0) {
+      try {
+        const tracked = vesselArr.filter((v) => trackedSet.has(v.mmsi))
+        for (const v of tracked) {
+          // Dedup: only insert if position changed or >5 min since last
+          const last = await db.execute({
+            sql: 'SELECT lat, lng, timestamp FROM vessel_history WHERE mmsi = ? ORDER BY timestamp DESC LIMIT 1',
+            args: [v.mmsi],
+          })
+          const prev = last.rows[0]
+          const shouldInsert = !prev ||
+            Math.abs((prev.lat as number) - v.lat) > 0.0001 ||
+            Math.abs((prev.lng as number) - v.lng) > 0.0001 ||
+            (Date.now() - new Date(prev.timestamp as string).getTime()) > 5 * 60 * 1000
+
+          if (shouldInsert) {
+            await db.execute({
+              sql: 'INSERT INTO vessel_history (mmsi, lat, lng, speed, course, heading, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              args: [v.mmsi, v.lat, v.lng, v.speed, v.course, v.heading, v.status],
+            })
+          }
+        }
+      } catch { /* history write failure is non-critical */ }
+    }
   }
 
   res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')

@@ -3,6 +3,7 @@ import type { Vessel, Fleet, MapBounds } from './types'
 import { useVessels } from './hooks/useVessels'
 import { useSettings } from './hooks/useSettings'
 import { useFleets } from './hooks/useFleets'
+import { useVesselHistory } from './hooks/useVesselHistory'
 import { BoatMap } from './components/BoatMap'
 import { VesselPanel } from './components/VesselPanel'
 import { VesselList } from './components/VesselList'
@@ -38,7 +39,7 @@ export default function App() {
   const [fitBounds, setFitBounds] = useState<MapBounds | null>(null)
   const [activeFleetId, setActiveFleetId] = useState<string | null>(null)
 
-  const { vessels, loading, error, isLive, vesselCount, liveCount, cachedCount } = useVessels(bounds, settings.apiKey, settings.myBoatMmsi)
+  const { vessels, loading, error, isLive, vesselCount, liveCount, cachedCount } = useVessels(bounds, settings.apiKey, settings.myBoatMmsi, fleets)
 
   // Build a map of MMSI -> fleet color
   // If activeFleetId is set and the vessel is in that fleet, use that fleet's color.
@@ -64,6 +65,20 @@ export default function App() {
     }
     return colors
   }, [fleets, activeFleetId])
+
+  // Trail for selected tracked vessel
+  const selectedMmsi = selectedVessel?.mmsi ?? null
+  const myMmsi = settings.myBoatMmsi ? parseInt(settings.myBoatMmsi, 10) : null
+  const selectedIsTracked = selectedMmsi
+    ? (isTracked(selectedMmsi) || selectedMmsi === myMmsi)
+    : false
+  const historyMmsi = selectedIsTracked ? selectedMmsi : null
+  const { history: vesselHistory } = useVesselHistory(historyMmsi)
+  const trailPoints = useMemo(
+    () => vesselHistory.map((p) => [p.lat, p.lng] as [number, number]),
+    [vesselHistory]
+  )
+  const trailColor = selectedMmsi ? vesselFleetColors.get(selectedMmsi) : undefined
 
   const handleBoundsChange = useCallback((newBounds: MapBounds) => {
     setBounds(newBounds)
@@ -151,6 +166,8 @@ export default function App() {
             fitBounds={fitBounds}
             onFitBoundsConsumed={handleFitBoundsConsumed}
             vesselFleetColors={vesselFleetColors}
+            trailPoints={trailPoints}
+            trailColor={trailColor}
           />
         </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, LayersControl, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, LayersControl, Polyline, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import type { Vessel, MapBounds } from '../types'
 import { getShipTypeColor } from '../api'
@@ -17,6 +17,8 @@ interface BoatMapProps {
   fitBounds?: MapBounds | null
   onFitBoundsConsumed?: () => void
   vesselFleetColors?: Map<number, string>
+  trailPoints?: [number, number][]
+  trailColor?: string
 }
 
 // Fix Leaflet default icon issue
@@ -138,6 +140,8 @@ export function BoatMap({
   fitBounds,
   onFitBoundsConsumed,
   vesselFleetColors,
+  trailPoints,
+  trailColor,
 }: BoatMapProps) {
   const myMmsi = myBoatMmsi ? parseInt(myBoatMmsi, 10) : null
 
@@ -195,6 +199,12 @@ export function BoatMap({
       <FlyToVessel vessel={selectedVessel} />
       <FitBoundsControl bounds={fitBounds} onConsumed={onFitBoundsConsumed} />
       <FindMyBoatControl vessels={vessels} myBoatMmsi={myBoatMmsi} onSelectVessel={onSelectVessel} />
+      {trailPoints && trailPoints.length > 1 && (
+        <Polyline
+          positions={trailPoints}
+          pathOptions={{ color: trailColor || '#1e88e5', weight: 3, opacity: 0.7, dashArray: '8 4' }}
+        />
+      )}
       {markers}
     </MapContainer>
   )
