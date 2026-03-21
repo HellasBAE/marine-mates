@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type { Vessel, Fleet, MapBounds } from './types'
 import { useVessels } from './hooks/useVessels'
 import { useSettings } from './hooks/useSettings'
@@ -25,6 +25,7 @@ export default function App() {
     fleets,
     addFleet,
     renameFleet,
+    setFleetColor,
     deleteFleet,
     addToFleet,
     removeFromFleet,
@@ -35,8 +36,34 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [fitBounds, setFitBounds] = useState<MapBounds | null>(null)
+  const [activeFleetId, setActiveFleetId] = useState<string | null>(null)
 
   const { vessels, loading, error, isLive, vesselCount, liveCount, cachedCount } = useVessels(bounds, settings.apiKey, settings.myBoatMmsi)
+
+  // Build a map of MMSI -> fleet color
+  // If activeFleetId is set and the vessel is in that fleet, use that fleet's color.
+  // Otherwise use the first fleet the vessel appears in.
+  const vesselFleetColors = useMemo(() => {
+    const colors = new Map<number, string>()
+    // First pass: assign from first fleet in list order
+    for (const fleet of fleets) {
+      for (const mmsi of fleet.mmsiList) {
+        if (!colors.has(mmsi)) {
+          colors.set(mmsi, fleet.color)
+        }
+      }
+    }
+    // Second pass: override with active fleet color
+    if (activeFleetId) {
+      const activeFleet = fleets.find((f) => f.id === activeFleetId)
+      if (activeFleet) {
+        for (const mmsi of activeFleet.mmsiList) {
+          colors.set(mmsi, activeFleet.color)
+        }
+      }
+    }
+    return colors
+  }, [fleets, activeFleetId])
 
   const handleBoundsChange = useCallback((newBounds: MapBounds) => {
     setBounds(newBounds)
@@ -105,8 +132,11 @@ export default function App() {
             onAddFleet={addFleet}
             onDeleteFleet={deleteFleet}
             onRenameFleet={renameFleet}
+            onSetFleetColor={setFleetColor}
             onZoomToFleet={handleZoomToFleet}
             isTracked={isTracked}
+            activeFleetId={activeFleetId}
+            onSetActiveFleet={setActiveFleetId}
           />
         </div>
 
@@ -120,6 +150,7 @@ export default function App() {
             myBoatMmsi={settings.myBoatMmsi}
             fitBounds={fitBounds}
             onFitBoundsConsumed={handleFitBoundsConsumed}
+            vesselFleetColors={vesselFleetColors}
           />
         </div>
 

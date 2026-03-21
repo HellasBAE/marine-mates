@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import type { Vessel, Fleet } from '../types'
+import { FLEET_COLORS } from '../types'
 import { getShipTypeColor, searchCachedVessels, searchWorldwide } from '../api'
 
 interface VesselListProps {
@@ -14,8 +15,11 @@ interface VesselListProps {
   onAddFleet: (name: string) => void
   onDeleteFleet: (fleetId: string) => void
   onRenameFleet: (fleetId: string, name: string) => void
+  onSetFleetColor: (fleetId: string, color: string) => void
   onZoomToFleet: (fleet: Fleet) => void
   isTracked: (mmsi: number) => boolean
+  activeFleetId: string | null
+  onSetActiveFleet: (fleetId: string | null) => void
 }
 
 type SidebarTab = 'fleets' | 'search'
@@ -50,8 +54,11 @@ export function VesselList({
   onAddFleet,
   onDeleteFleet,
   onRenameFleet,
+  onSetFleetColor,
   onZoomToFleet,
   isTracked,
+  activeFleetId,
+  onSetActiveFleet,
 }: VesselListProps) {
   const [tab, setTab] = useState<SidebarTab>('fleets')
   const [search, setSearch] = useState('')
@@ -62,6 +69,7 @@ export function VesselList({
   const [editName, setEditName] = useState('')
   const [hoveredMmsi, setHoveredMmsi] = useState<number | null>(null)
   const [trackMenuMmsi, setTrackMenuMmsi] = useState<number | null>(null)
+  const [colorPickerFleetId, setColorPickerFleetId] = useState<string | null>(null)
 
   const myMmsi = myBoatMmsi ? parseInt(myBoatMmsi, 10) : null
   const myBoat = useMemo(() => (myMmsi ? vessels.find((v) => v.mmsi === myMmsi) : null), [vessels, myMmsi])
@@ -389,9 +397,38 @@ export function VesselList({
               <div key={fleet.id} className="fleet-group">
                 <div
                   className="fleet-header"
-                  onClick={() => setExpandedFleet(isExpanded ? null : fleet.id)}
+                  onClick={() => {
+                    setExpandedFleet(isExpanded ? null : fleet.id)
+                    onSetActiveFleet(isExpanded ? null : fleet.id)
+                  }}
                 >
                   <div className="fleet-header-left">
+                    <div className="fleet-color-swatch-wrapper">
+                      <button
+                        className="fleet-color-swatch"
+                        style={{ backgroundColor: fleet.color }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setColorPickerFleetId(colorPickerFleetId === fleet.id ? null : fleet.id)
+                        }}
+                        title="Change fleet color"
+                      />
+                      {colorPickerFleetId === fleet.id && (
+                        <div className="fleet-color-picker" onClick={(e) => e.stopPropagation()}>
+                          {FLEET_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              className={`fleet-color-option ${fleet.color === c ? 'active' : ''}`}
+                              style={{ backgroundColor: c }}
+                              onClick={() => {
+                                onSetFleetColor(fleet.id, c)
+                                setColorPickerFleetId(null)
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <span className={`fleet-chevron ${isExpanded ? 'open' : ''}`}>›</span>
                     {editingFleetId === fleet.id ? (
                       <input

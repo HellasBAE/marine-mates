@@ -21,8 +21,22 @@ export interface Vessel {
 export interface Fleet {
   id: string
   name: string
+  color: string
   mmsiList: number[]
 }
+
+export const FLEET_COLORS = [
+  '#1e88e5', // blue (default)
+  '#e91e63', // pink
+  '#4caf50', // green
+  '#ff9800', // orange
+  '#9c27b0', // purple
+  '#00bcd4', // cyan
+  '#f44336', // red
+  '#ffeb3b', // yellow
+  '#795548', // brown
+  '#607d8b', // slate
+]
 
 export interface MapBounds {
   north: number

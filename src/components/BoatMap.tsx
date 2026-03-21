@@ -16,6 +16,7 @@ interface BoatMapProps {
   myBoatMmsi: string
   fitBounds?: MapBounds | null
   onFitBoundsConsumed?: () => void
+  vesselFleetColors?: Map<number, string>
 }
 
 // Fix Leaflet default icon issue
@@ -136,6 +137,7 @@ export function BoatMap({
   myBoatMmsi,
   fitBounds,
   onFitBoundsConsumed,
+  vesselFleetColors,
 }: BoatMapProps) {
   const myMmsi = myBoatMmsi ? parseInt(myBoatMmsi, 10) : null
 
@@ -149,7 +151,7 @@ export function BoatMap({
           isMyBoat={vessel.mmsi === myMmsi}
           onClick={() => onSelectVessel(vessel)}
           showName={showNames}
-          color={getShipTypeColor(vessel.shipType)}
+          color={vesselFleetColors?.get(vessel.mmsi) || getShipTypeColor(vessel.shipType)}
           isCached={vessel.isCached}
         />
       )),
