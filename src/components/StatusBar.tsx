@@ -8,6 +8,8 @@ interface StatusBarProps {
   onToggleSidebar: () => void
   sidebarOpen: boolean
   onOpenSettings: () => void
+  theme: 'dark' | 'light'
+  onToggleTheme: () => void
 }
 
 export function StatusBar({
@@ -20,6 +22,8 @@ export function StatusBar({
   onToggleSidebar,
   sidebarOpen,
   onOpenSettings,
+  theme,
+  onToggleTheme,
 }: StatusBarProps) {
   const renderStatus = () => {
     if (error) {
@@ -31,7 +35,6 @@ export function StatusBar({
     }
 
     if (isLive) {
-      // Still receiving — show live counter ticking up
       if (cachedCount > 0 && liveCount < vesselCount) {
         return (
           <span className="status-info">
@@ -75,6 +78,9 @@ export function StatusBar({
           <span className="live-dot" />
           {isLive ? 'LIVE' : 'DEMO'}
         </span>
+        <button className="theme-btn" onClick={onToggleTheme} aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+          {theme === 'dark' ? '☀' : '🌙'}
+        </button>
         <button className="settings-btn" onClick={onOpenSettings} aria-label="Settings">
           ⚙
         </button>

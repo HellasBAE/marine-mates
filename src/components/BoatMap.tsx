@@ -19,6 +19,7 @@ interface BoatMapProps {
   vesselFleetColors?: Map<number, string>
   trailPoints?: [number, number][]
   trailColor?: string
+  theme?: 'dark' | 'light'
 }
 
 // Fix Leaflet default icon issue
@@ -160,6 +161,7 @@ export function BoatMap({
   vesselFleetColors,
   trailPoints,
   trailColor,
+  theme,
 }: BoatMapProps) {
   const myMmsi = myBoatMmsi ? parseInt(myBoatMmsi, 10) : null
 
@@ -189,10 +191,16 @@ export function BoatMap({
       zoomControl={false}
     >
       <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="Dark">
+        <LayersControl.BaseLayer checked={theme === 'dark'} name="Dark">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer checked={theme === 'light'} name="Light">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Satellite">
@@ -205,12 +213,6 @@ export function BoatMap({
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Light">
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
         </LayersControl.BaseLayer>
       </LayersControl>

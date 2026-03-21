@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import type { Vessel, Fleet, MapBounds } from './types'
 import { useVessels } from './hooks/useVessels'
 import { useSettings } from './hooks/useSettings'
@@ -38,6 +38,18 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [fitBounds, setFitBounds] = useState<MapBounds | null>(null)
   const [activeFleetId, setActiveFleetId] = useState<string | null>(null)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('marinemates_theme') as 'dark' | 'light') || 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('marinemates_theme', theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  }, [])
 
   const { vessels, loading, error, isLive, vesselCount, liveCount, cachedCount } = useVessels(bounds, settings.apiKey, settings.myBoatMmsi, fleets)
 
@@ -131,6 +143,8 @@ export default function App() {
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         sidebarOpen={sidebarOpen}
         onOpenSettings={() => setSettingsOpen(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <div className="app-body">
@@ -168,6 +182,7 @@ export default function App() {
             vesselFleetColors={vesselFleetColors}
             trailPoints={trailPoints}
             trailColor={trailColor}
+            theme={theme}
           />
         </div>
 

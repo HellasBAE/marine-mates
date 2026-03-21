@@ -1,23 +1,46 @@
 /* ============================================
-   Boat Tracker — Dark Maritime Theme
+   Marine Mates — Teal Maritime Theme
    ============================================ */
 
-:root {
-  --bg-primary: #0a1929;
-  --bg-secondary: #0d2137;
-  --bg-surface: #132f4c;
-  --bg-hover: #1a3a5c;
-  --text-primary: #e3e8ef;
-  --text-secondary: #8b9dc3;
-  --text-muted: #5a6f8a;
-  --accent: #1e88e5;
-  --accent-hover: #42a5f5;
-  --border: #1e3a5f;
-  --danger: #f44336;
-  --success: #4caf50;
-  --warning: #ff9800;
+:root,
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-surface: #1f2b47;
+  --bg-hover: #2a3a5c;
+  --text-primary: #e8ecf1;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-rgb: 45, 212, 191;
+  --border: #2a3a5c;
+  --danger: #f43f5e;
+  --success: #34d399;
+  --warning: #fbbf24;
   --radius: 8px;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --map-tile: dark;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f0f4f8;
+  --bg-secondary: #ffffff;
+  --bg-surface: #e8eef4;
+  --bg-hover: #dce4ed;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent: #0d9488;
+  --accent-hover: #14b8a6;
+  --accent-rgb: 13, 148, 136;
+  --border: #cbd5e1;
+  --danger: #e11d48;
+  --success: #059669;
+  --warning: #d97706;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  --map-tile: light;
 }
 
 * {
@@ -70,7 +93,7 @@ body {
   letter-spacing: 0.5px;
 }
 
-.hamburger-btn, .settings-btn {
+.hamburger-btn, .settings-btn, .theme-btn {
   background: none;
   border: none;
   color: var(--text-primary);
@@ -81,7 +104,7 @@ body {
   transition: background 0.2s;
 }
 
-.hamburger-btn:hover, .settings-btn:hover {
+.hamburger-btn:hover, .settings-btn:hover, .theme-btn:hover {
   background: var(--bg-surface);
 }
 
@@ -225,7 +248,7 @@ body {
 }
 
 .sidebar-tab.active .tab-count {
-  background: rgba(30, 136, 229, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
 }
 
@@ -387,7 +410,7 @@ body {
 
 .fleet-zoom-btn:hover {
   color: var(--accent);
-  background: rgba(30, 136, 229, 0.15);
+  background: rgba(var(--accent-rgb), 0.15);
 }
 
 .fleet-delete-btn:hover {
@@ -764,7 +787,7 @@ body {
   display: inline-block;
   margin-left: 6px;
   padding: 1px 5px;
-  background: rgba(30, 136, 229, 0.2);
+  background: rgba(var(--accent-rgb), 0.2);
   color: var(--accent);
   font-size: 9px;
   font-weight: 700;
@@ -994,7 +1017,7 @@ body {
 .panel-track-btn {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(30, 136, 229, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .panel-track-btn:hover {
