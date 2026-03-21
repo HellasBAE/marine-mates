@@ -57,7 +57,7 @@ export function VesselList({
   onSetFleetColor,
   onZoomToFleet,
   isTracked,
-  activeFleetId,
+  activeFleetId: _activeFleetId,
   onSetActiveFleet,
 }: VesselListProps) {
   const [tab, setTab] = useState<SidebarTab>('fleets')
