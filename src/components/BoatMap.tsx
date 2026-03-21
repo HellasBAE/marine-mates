@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, LayersControl, Polyline, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import type { Vessel, MapBounds } from '../types'
@@ -93,6 +93,24 @@ function FitBoundsControl({ bounds, onConsumed }: { bounds: MapBounds | null | u
       onConsumed?.()
     }
   }, [bounds, map, onConsumed])
+  return null
+}
+
+// Auto-center on myBoat when it first appears (~1 mile radius = zoom 15)
+function AutoCenterMyBoat({ vessels, myBoatMmsi }: { vessels: Vessel[]; myBoatMmsi: string }) {
+  const map = useMap()
+  const hasCentered = useRef(false)
+  const myMmsi = myBoatMmsi ? parseInt(myBoatMmsi, 10) : null
+
+  useEffect(() => {
+    if (hasCentered.current || !myMmsi) return
+    const myBoat = vessels.find((v) => v.mmsi === myMmsi)
+    if (myBoat) {
+      hasCentered.current = true
+      map.flyTo([myBoat.lat, myBoat.lng], 15, { duration: 1.5 })
+    }
+  }, [vessels, myMmsi, map])
+
   return null
 }
 
@@ -199,6 +217,7 @@ export function BoatMap({
       <MapEvents onBoundsChange={onBoundsChange} />
       <FlyToVessel vessel={selectedVessel} />
       <FitBoundsControl bounds={fitBounds} onConsumed={onFitBoundsConsumed} />
+      <AutoCenterMyBoat vessels={vessels} myBoatMmsi={myBoatMmsi} />
       <FindMyBoatControl vessels={vessels} myBoatMmsi={myBoatMmsi} onSelectVessel={onSelectVessel} />
       {trailPoints && trailPoints.length > 1 && (
         <Polyline

@@ -15,16 +15,13 @@ interface VesselMarkerProps {
 
 function createBoatIcon(heading: number, color: string, isSelected: boolean, isMyBoat: boolean, isCached: boolean, isTracked: boolean): L.DivIcon {
   const effectiveColor = isMyBoat ? '#FFD700' : color
-  // Tracked boats are bigger, cached are smaller
   let size: number
   if (isCached) {
-    size = isSelected ? 22 : 16
-  } else if (isMyBoat) {
-    size = isSelected ? 36 : 30
-  } else if (isTracked) {
-    size = isSelected ? 36 : 28
+    size = isSelected ? 32 : 24
+  } else if (isMyBoat || isTracked) {
+    size = isSelected ? 44 : 36
   } else {
-    size = isSelected ? 24 : 16
+    size = isSelected ? 36 : 28
   }
   const opacity = isCached ? 0.35 : 1
   const borderColor = isSelected ? '#fff' : isMyBoat ? 'rgba(255,215,0,0.8)' : isCached ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.4)'
