@@ -153,11 +153,25 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
             east: Math.min(180, cb.east + lnp),
             west: Math.max(-180, cb.west - lnp),
           }
-          const data = await pollAIS(currentBounds)
+          // Fetch cached vessels for the new area too
+          const [data, cached] = await Promise.all([
+            pollAIS(currentBounds),
+            fetchCachedVessels(currentBounds),
+          ])
           if (disposed) return
           setVessels((prev) => {
             const next = new Map(prev)
-            data.forEach((v) => { next.set(v.mmsi, v); if (!liveMMSIs.current.has(v.mmsi)) liveMMSIs.current.add(v.mmsi) })
+            // Add cached first (lower priority)
+            cached.forEach((v) => {
+              if (!next.has(v.mmsi) || next.get(v.mmsi)?.isCached) {
+                next.set(v.mmsi, v)
+              }
+            })
+            // Then live data (higher priority)
+            data.forEach((v) => {
+              next.set(v.mmsi, v)
+              if (!liveMMSIs.current.has(v.mmsi)) liveMMSIs.current.add(v.mmsi)
+            })
             return next
           })
           setLiveCount(liveMMSIs.current.size); setLoading(false); setError(null)
