@@ -127,5 +127,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   res.setHeader('Cache-Control', 's-maxage=5, stale-while-revalidate=10')
-  res.json({ vessels: vesselArr, debug: { wsOpened, wsError, vesselCount: vesselArr.length, apiKeyLen: apiKey.length } })
+  res.json(vesselArr)
 }
