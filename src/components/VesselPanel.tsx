@@ -39,11 +39,14 @@ export function VesselPanel({ vessel, onClose, fleets, isTracked, onAddToFleet, 
     <div className="vessel-panel">
       <div className="vessel-panel-header">
         <div className="vessel-panel-title">
-          <div className="vessel-type-badge" style={{ backgroundColor: typeColor }}>
-            {vessel.shipType}
-          </div>
           <h2>{vessel.name}</h2>
-          {vessel.flag && <span className="vessel-flag">{vessel.flag}</span>}
+          <div className="vessel-panel-meta">
+            {vessel.flag && <span className="vessel-flag">{vessel.flag}</span>}
+            {vessel.callsign && <span className="vessel-flag">{vessel.callsign}</span>}
+            {vessel.shipType && vessel.shipType !== 'Unknown' && (
+              <span className="vessel-type-badge" style={{ backgroundColor: typeColor }}>{vessel.shipType}</span>
+            )}
+          </div>
         </div>
         <button className="close-btn" onClick={onClose} aria-label="Close panel">
           ×
@@ -77,20 +80,19 @@ export function VesselPanel({ vessel, onClose, fleets, isTracked, onAddToFleet, 
 
       <div className="vessel-panel-body">
         <div className="vessel-info-grid">
-          <InfoRow label="MMSI" value={String(vessel.mmsi)} />
-          {vessel.imo > 0 && <InfoRow label="IMO" value={String(vessel.imo)} />}
-          {vessel.callsign && <InfoRow label="Callsign" value={vessel.callsign} />}
           <InfoRow label="Status" value={vessel.status} />
           <InfoRow label="Speed" value={formatSpeed(vessel.speed)} />
           <InfoRow label="Course" value={formatCourse(vessel.course)} />
           <InfoRow label="Heading" value={`${vessel.heading}°`} />
           {vessel.destination && <InfoRow label="Destination" value={vessel.destination} />}
-          {vessel.length > 0 && (
-            <InfoRow label="Size" value={`${vessel.length}m × ${vessel.width}m`} />
+          {(vessel.length > 0 || vessel.width > 0) && (
+            <InfoRow label="Dimensions" value={`${vessel.length}m × ${vessel.width}m`} />
           )}
+          <InfoRow label="MMSI" value={String(vessel.mmsi)} />
+          {vessel.imo > 0 && <InfoRow label="IMO" value={String(vessel.imo)} />}
           <InfoRow
             label="Position"
-            value={`${vessel.lat.toFixed(4)}°, ${vessel.lng.toFixed(4)}°`}
+            value={`${vessel.lat.toFixed(5)}°, ${vessel.lng.toFixed(5)}°`}
           />
           <InfoRow label="Last Update" value={formatTime(vessel.lastUpdate)} />
         </div>

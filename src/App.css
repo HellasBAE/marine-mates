@@ -899,7 +899,14 @@ body {
 
 .vessel-panel-title h2 {
   font-size: 16px;
-  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.vessel-panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .vessel-type-badge {
