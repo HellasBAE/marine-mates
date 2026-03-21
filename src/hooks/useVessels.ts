@@ -143,7 +143,17 @@ export function useVessels(bounds: MapBounds, apiKey: string, myBoatMmsi?: strin
       const doPoll = async () => {
         if (disposed) return
         try {
-          const data = await pollAIS(wideBounds)
+          // Use current bounds (not the initial ones) so panning works
+          const cb = boundsRef.current
+          const lp = (cb.north - cb.south) * 0.5
+          const lnp = (cb.east - cb.west) * 0.5
+          const currentBounds: MapBounds = {
+            north: Math.min(90, cb.north + lp),
+            south: Math.max(-90, cb.south - lp),
+            east: Math.min(180, cb.east + lnp),
+            west: Math.max(-180, cb.west - lnp),
+          }
+          const data = await pollAIS(currentBounds)
           if (disposed) return
           setVessels((prev) => {
             const next = new Map(prev)
